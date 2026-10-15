@@ -4,13 +4,19 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+import ssl
+try:
+    import certifi
+    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    SSL_CONTEXT = ssl.create_default_context()
 key=os.getenv('FUYAO_API_KEY') or os.getenv('API_KEY')
 if not key: raise SystemExit('缺少 FUYAO_API_KEY 或 API_KEY，请先 export')
 end=datetime.now(timezone.utc); start=end-timedelta(days=45)
 params=urlencode({'thscode':'000300.SH','interval':'1d','start':int(start.timestamp()*1000),'end':int(end.timestamp()*1000)})
 req=Request('https://fuyao.aicubes.cn/api/a-share-index/prices/historical?'+params,headers={'X-api-key':key,'Accept':'application/json'})
 try:
-    with urlopen(req, timeout=20) as resp:
+    with urlopen(req, timeout=20, context=SSL_CONTEXT) as resp:
         status=resp.status; body=json.loads(resp.read().decode('utf-8'))
 except HTTPError as exc:
     status=exc.code
