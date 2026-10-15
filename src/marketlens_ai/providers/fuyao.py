@@ -92,6 +92,6 @@ class FuyaoProvider:
         rows = (snap.get("raw") or {}).get("item", [])
         changes = [x.get("price_change_ratio_pct") for x in rows if isinstance(x.get("price_change_ratio_pct"),(int,float))]
         up = sum(x > 0 for x in changes); down = sum(x < 0 for x in changes); flat = sum(x == 0 for x in changes)
-        return {"source":self.name,"status":"ok","raw":{"member_count":len(codes),"sample_count":len(changes),"up":up,"down":down,"flat":flat,"up_pct":round(up/len(changes)*100,2) if changes else None,"snapshot":rows}}
+        return {"source":self.name,"status":"ok","raw":{"member_count":len(codes),"sample_count":len(changes),"up":up,"down":down,"flat":flat,"up_pct":round(up/len(changes)*100,2) if changes else None,"snapshot":rows,"timestamp":(snap.get("raw") or {}).get("timestamp")}}
     def trading_days(self) -> dict[str, Any]:
         return self._get("/api/a-share/calendar/trading-days", {})
