@@ -1,5 +1,5 @@
 """验证扶摇沪深300历史行情；仅使用 Python 标准库，避免额外依赖。"""
-import json, os, sys
+import json, os, sys, subprocess
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -22,7 +22,14 @@ except HTTPError as exc:
     status=exc.code
     body=json.loads(exc.read().decode('utf-8')) if exc.fp else {'message':str(exc)}
 except (URLError, TimeoutError) as exc:
-    raise SystemExit(f'网络请求失败: {exc}')
+    # macOS curl 使用系统钥匙串证书；在受限 Python 环境缺少 CA 时回退。
+    try:
+        raw = subprocess.check_output(['curl', '--fail', '--silent', '--show-error', '--max-time', '20',
+            'https://fuyao.aicubes.cn/api/a-share-index/prices/historical?' + params,
+            '-H', 'X-api-key: ' + key, '-H', 'Accept: application/json'], stderr=subprocess.STDOUT)
+        status = 200; body = json.loads(raw.decode('utf-8'))
+    except Exception as curl_exc:
+        raise SystemExit(f'Python TLS 与 curl 均失败。Python: {exc}; curl: {curl_exc}')
 data=body.get('data') or {}; items=data.get('item') or []
 print(json.dumps({'http_status':status,'code':body.get('code'),'message':body.get('message'),'request_id':body.get('request_id'),'data_timestamp':data.get('timestamp'),'item_count':len(items),'first':items[0] if items else None,'last':items[-1] if items else None},ensure_ascii=False,indent=2))
 if status != 200 or body.get('code') != 0 or len(items)<20: sys.exit(2)
