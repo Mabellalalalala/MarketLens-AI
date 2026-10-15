@@ -9,3 +9,5 @@
 补充：已根据 PM 提供的官方说明确认扶摇 REST 鉴权为请求头 `X-api-key`，快照端点为 `/api/a-share/prices/snapshot?thscodes=...`，响应使用 `code/message/request_id/data` 信封。代码已接入该端点；历史指数行情已按完整文档接入；待网络/密钥实调。
 
 已从完整接口文档确认并接入：指数历史 K 线 `/api/a-share-index/prices/historical`（仅单指数、1d、近5年）；交易日历 `/api/a-share/calendar/trading-days`（无参数、近一年）。沪深300映射为 `000300.SH`。
+
+Mac 本机已成功调用扶摇指数历史 K 线：`000300.SH` 返回 26 条日线，HTTP 200、`code=0`，请求 ID `aa52bdca108c4788833d7e501a12802c`。字段标准化已覆盖日期、OHLC、成交量和成交额。
