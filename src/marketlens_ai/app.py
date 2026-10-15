@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
-from .metrics import index_return, classify_state
+from .metrics import index_return, classify_state, Evidence
 from .analysis import research_output
 from .ai import generate
 app=Flask(__name__, template_folder='templates')
@@ -17,11 +17,15 @@ def research(symbol='沪深300', periods=20):
     breadth_pct=braw.get('up_pct')
     quality='充分' if evidence and breadth.get('status')=='ok' else ('部分充分' if evidence else '不足')
     facts=([{'text':f'{periods}日区间收益率为 {ret}%','evidence_id':evidence.id}] if ret is not None else [])
-    if breadth.get('status')=='ok': facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
-    base = research_output({'symbol':symbol,'periods':periods}, facts, ([evidence] if evidence else []), quality, ret, breadth_pct)
+    evidence_objs=([evidence] if evidence else [])
+    if breadth.get('status')=='ok':
+        facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
+        evidence_objs.append(Evidence('ev-breadth-000300','fuyao','price_change_ratio_pct',breadth_pct,'%','latest','成分股上涨数 / 有效快照数 × 100'))
+    base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
     base['market_breadth']={'status':breadth.get('status'),'up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
     base['plan']=[{'step':'index_history','provider':provider.name,'status':data.get('status','unknown')}]
     base['data_quality'].update({'provider':provider.name,'error':data.get('error')})
+    base['evidence']=[e.__dict__ for e in evidence_objs]
     base['raw']={'index':data,'breadth':breadth}
     return base
 @app.get('/')
