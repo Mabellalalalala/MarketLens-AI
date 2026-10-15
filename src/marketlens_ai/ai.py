@@ -1,6 +1,6 @@
 import json, os, requests
 ALLOWED={'facts','inferences','contradictions','uncertainties','watch_conditions','follow_ups','evidence_refs','summary'}
-FORBIDDEN=('明天涨','应该买','满仓','买入','卖出','仓位','收益保证')
+FORBIDDEN=('明天涨','明天跌','应该买','应该卖','满仓','买入','卖出','持有','仓位','收益保证','目标价','止损')
 def validate_output(text, evidence_ids):
     try: obj=json.loads(text)
     except Exception as e: return {'status':'invalid_json','error':str(e)}
@@ -13,7 +13,7 @@ def validate_output(text, evidence_ids):
 def generate(payload, evidence_ids):
     key=os.getenv('DEEPSEEK_API_KEY')
     if not key: return {'status':'unconfigured','error':'未配置 DEEPSEEK_API_KEY'}
-    system='你是市场研究助手。只基于输入事实，不预测涨跌，不给买卖或仓位建议。只返回 JSON，字段为 summary,facts,inferences,contradictions,uncertainties,watch_conditions,follow_ups,evidence_refs。'
+    system='''你是 MarketLens AI 的 A 股市场状态研究助手。只使用输入中的真实字段和证据，不补造数字。输出必须帮助用户理解当前市场状态、主要矛盾、哪些可观察条件会改变判断。严格区分 facts（事实）、inferences（归纳）、contradictions（可比指标背离）、uncertainties（缺失或时点问题）、watch_conditions（可观察变量和阈值）。不得预测未来涨跌，不得给买入、卖出、持有、仓位、收益目标或交易时点建议。follow_ups 只能是继续研究问题或数据核查动作。只返回 JSON，字段为 summary,facts,inferences,contradictions,uncertainties,watch_conditions,follow_ups,evidence_refs。facts 和 evidence_refs 必须引用输入中存在的证据。'''
     try:
         r=requests.post('https://api.deepseek.com/v1/chat/completions',headers={'Authorization':f'Bearer {key}'},json={'model':'deepseek-chat','messages':[{'role':'system','content':system},{'role':'user','content':json.dumps(payload,ensure_ascii=False)}],'temperature':0.1},timeout=30)
         r.raise_for_status(); text=r.json()['choices'][0]['message']['content']; return validate_output(text,evidence_ids)
