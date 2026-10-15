@@ -7,3 +7,5 @@
 |市场宽度/行业/估值|扶摇/iFinD|待按授权核实|未测试|未验证|UI 应显示未覆盖|
 
 补充：已根据 PM 提供的官方说明确认扶摇 REST 鉴权为请求头 `X-api-key`，快照端点为 `/api/a-share/prices/snapshot?thscodes=...`，响应使用 `code/message/request_id/data` 信封。代码已接入该端点；历史行情 endpoint 仍待 API 参考和账号权限确认，未猜测或伪造。
+
+已从完整接口文档确认并接入：指数历史 K 线 `/api/a-share-index/prices/historical`（仅单指数、1d、近5年）；交易日历 `/api/a-share/calendar/trading-days`（无参数、近一年）。沪深300映射为 `000300.SH`。
