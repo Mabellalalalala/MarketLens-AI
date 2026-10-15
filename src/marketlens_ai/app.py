@@ -12,7 +12,7 @@ from .ai import generate
 app=Flask(__name__, template_folder='templates')
 
 def research(symbol='沪深300', periods=20):
-    provider=FuyaoProvider()
+    provider=FuyaoProvider(retries=0, timeout=8)
     data=provider.index_history(symbol, periods)
     raw=data.get('raw') if isinstance(data,dict) else None
     rows=(raw or {}).get('rows',[]) if isinstance(raw,dict) else []

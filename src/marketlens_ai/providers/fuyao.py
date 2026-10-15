@@ -7,11 +7,12 @@ import requests
 class FuyaoProvider:
     """扶摇 REST adapter. 密钥只从服务端环境读取。"""
     name = "扶摇 API"
-    def __init__(self, base_url=None, api_key=None, session=None, retries=2):
+    def __init__(self, base_url=None, api_key=None, session=None, retries=2, timeout=15):
         self.base_url = (base_url or os.getenv("FUYAO_API_BASE_URL") or "https://fuyao.aicubes.cn").rstrip("/")
         self.api_key = api_key or os.getenv("FUYAO_API_KEY") or os.getenv("API_KEY")
         self.session = session or requests.Session()
         self.retries = retries
+        self.timeout = timeout
 
     def _get(self, path, params):
         if not self.api_key:
