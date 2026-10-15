@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
 from .metrics import index_return, classify_state
 from .analysis import research_output
+from .ai import generate
 app=Flask(__name__, template_folder='templates')
 
 def research(symbol='沪深300', periods=20):
@@ -21,3 +22,8 @@ def research(symbol='沪深300', periods=20):
 def index(): return render_template('index.html')
 @app.get('/api/research')
 def api_research(): return jsonify(research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20))))
+
+@app.get('/api/research/ai')
+def api_research_ai():
+    result=research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20)))
+    return jsonify(generate({'scope':result['research_scope'],'facts':result['facts'],'evidence':result['evidence'],'quality':result['data_quality']}, [e['id'] for e in result['evidence']]))
