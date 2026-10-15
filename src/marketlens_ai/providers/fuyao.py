@@ -59,5 +59,28 @@ class FuyaoProvider:
         out["symbol"] = symbol; out["thscode"] = thscode; out["periods"] = periods
         return out
 
+
+    def index_catalog(self, tag: str = "industry") -> dict[str, Any]:
+        return self._get("/api/a-share-index/catalog/ths-index-list", {"tag": tag})
+
+    def index_constituents(self, thscode: str = "000300.SH") -> dict[str, Any]:
+        return self._get("/api/a-share-index/constituents/ths-stock-list", {"thscode": thscode})
+
+    def stock_snapshot(self, thscodes: list[str]) -> dict[str, Any]:
+        # 文档允许批量 thscodes；控制单次规模避免超长请求。
+        return self._get("/api/a-share/prices/snapshot", {"thscodes": ",".join(thscodes)})
+
+    def breadth_for_index(self, thscode: str = "000300.SH") -> dict[str, Any]:
+        members = self.index_constituents(thscode)
+        if members.get("status") != "ok": return members
+        items = (members.get("raw") or {}).get("item", [])
+        codes = [x.get("thscode") for x in items if x.get("thscode")]
+        if not codes: return {"source": self.name, "status":"empty", "error":"成分股为空"}
+        snap = self.stock_snapshot(codes)
+        if snap.get("status") != "ok": return snap
+        rows = (snap.get("raw") or {}).get("item", [])
+        changes = [x.get("change_pct") for x in rows if isinstance(x.get("change_pct"),(int,float))]
+        up = sum(x > 0 for x in changes); down = sum(x < 0 for x in changes); flat = sum(x == 0 for x in changes)
+        return {"source":self.name,"status":"ok","raw":{"member_count":len(codes),"sample_count":len(changes),"up":up,"down":down,"flat":flat,"up_pct":round(up/len(changes)*100,2) if changes else None,"snapshot":rows}}
     def trading_days(self) -> dict[str, Any]:
         return self._get("/api/a-share/calendar/trading-days", {})
