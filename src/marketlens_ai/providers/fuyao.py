@@ -66,6 +66,16 @@ class FuyaoProvider:
     def index_constituents(self, thscode: str = "000300.SH") -> dict[str, Any]:
         return self._get("/api/a-share-index/constituents/ths-stock-list", {"thscode": thscode})
 
+    def industry_snapshot(self, limit: int = 12) -> dict[str, Any]:
+        catalog = self.index_catalog("industry")
+        if catalog.get("status") != "ok": return catalog
+        items = (catalog.get("raw") or {}).get("item", [])[:limit]
+        codes = [x.get("thscode") for x in items if x.get("thscode")]
+        if not codes: return {"source":self.name,"status":"empty","error":"行业目录为空"}
+        snap = self._get("/api/a-share-index/prices/snapshot", {"thscodes": ",".join(codes)})
+        if snap.get("status") == "ok": snap["catalog"] = items
+        return snap
+
     def stock_snapshot(self, thscodes: list[str]) -> dict[str, Any]:
         # 文档允许批量 thscodes；控制单次规模避免超长请求。
         return self._get("/api/a-share/prices/snapshot", {"thscodes": ",".join(thscodes)})

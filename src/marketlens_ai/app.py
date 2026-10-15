@@ -37,3 +37,7 @@ def api_research(): return jsonify(research(request.args.get('symbol','沪深300
 def api_research_ai():
     result=research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20)))
     return jsonify(generate({'scope':result['research_scope'],'facts':result['facts'],'evidence':result['evidence'],'quality':result['data_quality']}, [e['id'] for e in result['evidence']]))
+
+@app.get('/api/industries')
+def api_industries():
+    return jsonify(FuyaoProvider().industry_snapshot())
