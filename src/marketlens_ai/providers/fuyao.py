@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 import requests
 
@@ -39,7 +40,24 @@ class FuyaoProvider:
         return self._get("/api/a-share/prices/snapshot", {"thscodes": thscodes})
 
     def index_history(self, symbol: str = "沪深300", periods: int = 20) -> dict[str, Any]:
-        path = os.getenv("FUYAO_INDEX_HISTORY_PATH")
-        if not path:
-            return {"source": self.name, "status": "unsupported", "error": "请配置已从扶摇 API 参考确认的 FUYAO_INDEX_HISTORY_PATH；未猜测历史端点", "symbol": symbol, "periods": periods}
-        return self._get(path, {"thscodes": symbol, "periods": periods})
+        codes = {"沪深300": "000300.SH", "上证指数": "000001.SH", "深证成指": "399001.SZ", "创业板指": "399006.SZ"}
+        thscode = codes.get(symbol, symbol)
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(days=max(periods * 3, 45))
+        out = self._get("/api/a-share-index/prices/historical", {
+            "thscode": thscode, "interval": "1d",
+            "start": int(start.timestamp() * 1000), "end": int(end.timestamp() * 1000),
+        })
+        if out.get("status") == "ok":
+            raw = out.get("raw") or {}
+            items = raw.get("item", []) if isinstance(raw, dict) else []
+            rows = [{"date": str(i.get("date_ms", "")), "close": i.get("close_price"),
+                     "open": i.get("open_price"), "high": i.get("high_price"),
+                     "low": i.get("low_price"), "volume": i.get("volume"),
+                     "turnover": i.get("turnover")} for i in items]
+            out["raw"] = {"timestamp": raw.get("timestamp"), "rows": rows, "item": items}
+        out["symbol"] = symbol; out["thscode"] = thscode; out["periods"] = periods
+        return out
+
+    def trading_days(self) -> dict[str, Any]:
+        return self._get("/api/a-share/calendar/trading-days", {})
