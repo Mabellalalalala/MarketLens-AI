@@ -1,4 +1,9 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
 from .metrics import index_return, classify_state, Evidence
