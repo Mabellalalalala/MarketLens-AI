@@ -12,11 +12,17 @@ def research(symbol='沪深300', periods=20):
     raw=data.get('raw') if isinstance(data,dict) else None
     rows=(raw or {}).get('rows',[]) if isinstance(raw,dict) else []
     ret,evidence=index_return(rows, periods)
-    quality='充分' if evidence else ('不足' if data.get('status')!='ok' else '部分充分')
-    base = research_output({'symbol':symbol,'periods':periods}, ([{'text':f'{periods}日区间收益率为 {ret}%','evidence_id':evidence.id}] if ret is not None else []), ([evidence] if evidence else []), quality, ret, None)
+    breadth=provider.breadth_for_index({'沪深300':'000300.SH'}.get(symbol,symbol))
+    braw=(breadth.get('raw') or {}) if isinstance(breadth,dict) else {}
+    breadth_pct=braw.get('up_pct')
+    quality='充分' if evidence and breadth.get('status')=='ok' else ('部分充分' if evidence else '不足')
+    facts=([{'text':f'{periods}日区间收益率为 {ret}%','evidence_id':evidence.id}] if ret is not None else [])
+    if breadth.get('status')=='ok': facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
+    base = research_output({'symbol':symbol,'periods':periods}, facts, ([evidence] if evidence else []), quality, ret, breadth_pct)
+    base['market_breadth']={'status':breadth.get('status'),'up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
     base['plan']=[{'step':'index_history','provider':provider.name,'status':data.get('status','unknown')}]
     base['data_quality'].update({'provider':provider.name,'error':data.get('error')})
-    base['raw']=data
+    base['raw']={'index':data,'breadth':breadth}
     return base
 @app.get('/')
 def index(): return render_template('index.html')
