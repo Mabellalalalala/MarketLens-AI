@@ -6,7 +6,7 @@ except ImportError:
     pass
 from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
-from .metrics import index_return, classify_state, Evidence
+from .metrics import index_return, classify_state, trading_activity, Evidence
 from .analysis import research_output
 from .ai import generate
 app=Flask(__name__, template_folder='templates')
@@ -17,6 +17,7 @@ def research(symbol='沪深300', periods=20):
     raw=data.get('raw') if isinstance(data,dict) else None
     rows=(raw or {}).get('rows',[]) if isinstance(raw,dict) else []
     ret,evidence=index_return(rows, periods)
+    activity, activity_evidence=trading_activity(rows, min(periods,20))
     breadth=provider.breadth_for_index({'沪深300':'000300.SH'}.get(symbol,symbol))
     braw=(breadth.get('raw') or {}) if isinstance(breadth,dict) else {}
     breadth_pct=braw.get('up_pct')
@@ -26,7 +27,9 @@ def research(symbol='沪深300', periods=20):
     if breadth.get('status')=='ok':
         facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
         evidence_objs.append(Evidence('ev-breadth-000300','fuyao','price_change_ratio_pct',breadth_pct,'% ',str(braw.get('timestamp') or 'unknown'),'成分股上涨数 / 有效快照数 × 100'))
+    evidence_objs.extend(activity_evidence)
     base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
+    base['trading_activity']={'status':'ok' if activity else 'unavailable','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level')}
     base['market_breadth']={'status':breadth.get('status'),'up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
     base['plan']=[{'step':'index_history','provider':provider.name,'status':data.get('status','unknown')}]
     base['data_quality'].update({'provider':provider.name,'error':data.get('error')})
