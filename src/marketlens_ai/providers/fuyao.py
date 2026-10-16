@@ -41,7 +41,7 @@ class FuyaoProvider:
         return self._get("/api/a-share/prices/snapshot", {"thscodes": thscodes})
 
     def index_history(self, symbol: str = "沪深300", periods: int = 20) -> dict[str, Any]:
-        codes = {"沪深300": "000300.SH", "上证指数": "000001.SH", "深证成指": "399001.SZ", "创业板指": "399006.SZ"}
+        codes = {"沪深300": "000300.SH", "上证指数": "000001.SH", "深证成指": "399001.SZ", "创业板指": "399006.SZ", "中证1000": "000852.SH"}
         thscode = codes.get(symbol, symbol)
         end = datetime.now(timezone.utc)
         start = end - timedelta(days=max(periods * 3, 45))
