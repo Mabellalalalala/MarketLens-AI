@@ -11,7 +11,7 @@ from .analysis import research_output
 from .ai import generate
 app=Flask(__name__, template_folder='templates')
 
-def research(symbol='沪深300', periods=20):
+def research(symbol='沪深300', periods=20, focus=None):
     provider=FuyaoProvider(retries=0, timeout=8)
     data=provider.index_history(symbol, periods)
     raw=data.get('raw') if isinstance(data,dict) else None
@@ -33,7 +33,7 @@ def research(symbol='沪深300', periods=20):
     evidence_objs.extend(activity_evidence); evidence_objs.extend(style_evidence)
     # 去重同一指标证据，避免 AI 看到重复 ID。
     evidence_objs=list({e.id:e for e in evidence_objs}.values())
-    base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
+    base = research_output({'symbol':symbol,'periods':periods,'focus':focus}, facts, evidence_objs, quality, ret, breadth_pct)
     base['trading_activity']={'status':'REAL' if activity else 'UNAVAILABLE','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level'),'proxy':'Volume + Turnover limited measure'}
     base['style_rotation']=style
     base['dimensions']={
@@ -59,9 +59,17 @@ def index(): return render_template('index.html')
 @app.get('/api/research')
 def api_research(): return jsonify(research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20))))
 
+@app.get('/api/evidence/<evidence_id>')
+def api_evidence(evidence_id):
+    result=research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20)))
+    for item in result.get('evidence',[]):
+        if item.get('id') == evidence_id: return jsonify(item)
+    return jsonify({'status':'not_found','evidence_id':evidence_id}), 404
+
 @app.get('/api/research/ai')
 def api_research_ai():
-    result=research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20)))
+    focus=request.args.get('focus')
+    result=research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20)), focus)
     return jsonify(generate({'scope':result['research_scope'],'facts':result['facts'],'evidence':result['evidence'],'quality':result['data_quality']}, [e['id'] for e in result['evidence']]))
 
 @app.get('/api/industries')
