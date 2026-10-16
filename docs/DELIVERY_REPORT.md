@@ -42,7 +42,11 @@ PYTHONPATH=src python3 scripts/build_snapshot.py
 python3 scripts/validate_snapshot.py
 PYTHONPATH=src python3 -m flask --app marketlens_ai.app run --host 127.0.0.1 --port 5055
 
-Render production start command: `gunicorn --chdir src marketlens_ai.app:app --bind 0.0.0.0:$PORT`
+Render Build Command: `pip install -r requirements.txt`
+
+Render production start command: `sh scripts/render_start.sh`
+
+The start script builds `data/snapshots/latest.json` with server environment credentials when absent, then starts Gunicorn on `0.0.0.0:$PORT`.
 ```
 
 浏览器访问 `http://127.0.0.1:5055`。
