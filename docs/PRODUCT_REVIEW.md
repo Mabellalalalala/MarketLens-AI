@@ -239,9 +239,9 @@ Sentiment          UNAVAILABLE
 Important Events   UNAVAILABLE
 ```
 
-## 5. AI 与候选人的分工
+## 5. AI 与人的分工
 
-### 候选人/产品经理主导
+### 人主导
 
 - 定义用户问题和产品范围；
 - 规定不预测、不推荐、不提供仓位建议；
@@ -251,6 +251,7 @@ Important Events   UNAVAILABLE
 - 决定估值历史分位不可用时显示 LIMITED；
 - 决定事件和情绪数据不可用时显示 UNAVAILABLE；
 - 对 AI 结果进行人工复核和验收；
+- 提出数据存储的思路
 - 根据真实错误修正产品口径和 Prompt。
 
 ### Codex/工程实现
