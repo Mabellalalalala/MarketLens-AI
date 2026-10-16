@@ -1,6 +1,7 @@
 from .providers.fuyao import FuyaoProvider
 from .metrics import index_return, classify_state, trading_activity, style_rotation, activity_contradiction, Evidence
 from .analysis import research_output
+from datetime import datetime, timezone
 def research(symbol='沪深300', periods=20, focus=None):
     provider=FuyaoProvider(retries=0, timeout=8)
     data=provider.index_history(symbol, periods)
@@ -24,6 +25,9 @@ def research(symbol='沪深300', periods=20, focus=None):
     # 去重同一指标证据，避免 AI 看到重复 ID。
     evidence_objs=list({e.id:e for e in evidence_objs}.values())
     base = research_output({'symbol':symbol,'periods':periods,'focus':focus}, facts, evidence_objs, quality, ret, breadth_pct)
+    latest_ms=(rows[-1].get('date') if rows else None)
+    try: base['as_of']=datetime.fromtimestamp(int(latest_ms)/1000,tz=timezone.utc).strftime('%Y-%m-%d')
+    except (TypeError,ValueError,OverflowError): base['as_of']=None
     base['trading_activity']={'status':'REAL' if activity else 'UNAVAILABLE','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level'),'proxy':'Volume + Turnover limited measure'}
     base['style_rotation']=style
     base['dimensions']={
