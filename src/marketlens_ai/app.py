@@ -26,7 +26,7 @@ def research(symbol='沪深300', periods=20):
     evidence_objs=([evidence] if evidence else [])
     if breadth.get('status')=='ok':
         facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
-        evidence_objs.append(Evidence('ev-breadth-000300','fuyao','price_change_ratio_pct',breadth_pct,'% ',str(braw.get('timestamp') or 'unknown'),'成分股上涨数 / 有效快照数 × 100'))
+        evidence_objs.append(Evidence(id='ev-breadth-000300',source='fuyao',field='price_change_ratio_pct',value=breadth_pct,unit='%',as_of=str(braw.get('timestamp') or 'unknown'),method='成分股上涨数 / 有效快照数 × 100',category='market_breadth'))
     evidence_objs.extend(activity_evidence)
     base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
     base['trading_activity']={'status':'ok' if activity else 'unavailable','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level')}
