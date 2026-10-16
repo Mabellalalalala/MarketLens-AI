@@ -19,7 +19,7 @@ def research(symbol='沪深300', periods=20, focus=None):
     evidence_objs=([evidence] if evidence else [])
     if breadth.get('status')=='ok':
         facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
-        evidence_objs.append(Evidence(id='ev-breadth-000300',source='fuyao',field='price_change_ratio_pct',value=breadth_pct,unit='%',as_of=str(braw.get('timestamp') or 'unknown'),method='成分股上涨数 / 有效快照数 × 100',category='market_breadth'))
+        evidence_objs.append(Evidence(id='ev-breadth-000300',source='fuyao',field='price_change_ratio_pct',value=breadth_pct,unit='%',as_of=str(braw.get('timestamp') or 'unknown'),method='成分股上涨数 / 有效快照数 × 100',category='market_breadth',status='DERIVED',freshness='CURRENT'))
     evidence_objs.extend(activity_evidence); evidence_objs.extend(style_evidence)
     # 去重同一指标证据，避免 AI 看到重复 ID。
     evidence_objs=list({e.id:e for e in evidence_objs}.values())
@@ -38,7 +38,7 @@ def research(symbol='沪深300', periods=20, focus=None):
     base['evidence_coverage']=[{'label':'Market Structure','status':base['dimensions']['market_structure']['status']},{'label':'Market Breadth','status':base['dimensions']['breadth']['status']},{'label':'Style Rotation','status':style.get('status')},{'label':'Trading Activity','status':base['dimensions']['trading_activity']['status']},{'label':'Valuation','status':'LIMITED'},{'label':'Sentiment','status':'UNAVAILABLE'},{'label':'Important Events','status':'UNAVAILABLE'}]
     base['contradictions'].append(activity_contradiction(ret, activity))
     if style.get('status')=='DERIVED': base['contradictions'].append({'status':'detected' if abs(style.get('difference',0))>2 else 'none','label':style.get('label'),'evidence_ids':['ev-style-difference']})
-    base['market_breadth']={'status':'REAL' if breadth.get('status')=='ok' else 'UNAVAILABLE','up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
+    base['market_breadth']={'status':'DERIVED' if breadth.get('status')=='ok' else ('ERROR' if breadth.get('status') in ('network_error','api_error','rate_limited') else 'UNAVAILABLE'),'up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
     base['plan']=[{'step':'index_history','provider':provider.name,'status':data.get('status','unknown')}]
     base['data_quality'].update({'provider':provider.name,'error':data.get('error')})
     base['evidence']=[e.__dict__ for e in evidence_objs]
