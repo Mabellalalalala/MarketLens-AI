@@ -6,7 +6,7 @@ except ImportError:
     pass
 from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
-from .metrics import index_return, classify_state, trading_activity, Evidence
+from .metrics import index_return, classify_state, trading_activity, style_rotation, activity_contradiction, Evidence
 from .analysis import research_output
 from .ai import generate
 app=Flask(__name__, template_folder='templates')
@@ -18,6 +18,9 @@ def research(symbol='沪深300', periods=20):
     rows=(raw or {}).get('rows',[]) if isinstance(raw,dict) else []
     ret,evidence=index_return(rows, periods)
     activity, activity_evidence=trading_activity(rows, min(periods,20))
+    small_data=provider.index_history('中证1000', periods)
+    small_rows=((small_data.get('raw') or {}).get('rows',[])) if isinstance(small_data,dict) else []
+    style, style_evidence=style_rotation(rows, small_rows, periods)
     breadth=provider.breadth_for_index({'沪深300':'000300.SH'}.get(symbol,symbol))
     braw=(breadth.get('raw') or {}) if isinstance(breadth,dict) else {}
     breadth_pct=braw.get('up_pct')
@@ -27,10 +30,13 @@ def research(symbol='沪深300', periods=20):
     if breadth.get('status')=='ok':
         facts.append({'text':f"成分股上涨占比 {breadth_pct}%（上涨{braw.get('up')}、下跌{braw.get('down')}、平盘{braw.get('flat')}，样本{braw.get('sample_count')}）",'evidence_id':'ev-breadth-000300'})
         evidence_objs.append(Evidence(id='ev-breadth-000300',source='fuyao',field='price_change_ratio_pct',value=breadth_pct,unit='%',as_of=str(braw.get('timestamp') or 'unknown'),method='成分股上涨数 / 有效快照数 × 100',category='market_breadth'))
-    evidence_objs.extend(activity_evidence)
+    evidence_objs.extend(activity_evidence); evidence_objs.extend(style_evidence)
     base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
-    base['trading_activity']={'status':'ok' if activity else 'unavailable','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level')}
-    base['market_breadth']={'status':breadth.get('status'),'up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
+    base['trading_activity']={'status':'REAL' if activity else 'UNAVAILABLE','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level'),'proxy':'Volume + Turnover limited measure'}
+    base['style_rotation']=style
+    base['contradictions'].append(activity_contradiction(ret, activity))
+    if style.get('status')=='DERIVED': base['contradictions'].append({'status':'detected' if abs(style.get('difference',0))>2 else 'none','label':style.get('label'),'evidence_ids':['ev-style-difference']})
+    base['market_breadth']={'status':'REAL' if breadth.get('status')=='ok' else 'UNAVAILABLE','up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
     base['plan']=[{'step':'index_history','provider':provider.name,'status':data.get('status','unknown')}]
     base['data_quality'].update({'provider':provider.name,'error':data.get('error')})
     base['evidence']=[e.__dict__ for e in evidence_objs]
