@@ -4,15 +4,15 @@ from typing import Any
 @dataclass
 class Evidence:
     id: str
-    category: str = 'market_structure'
-    status: str = 'REAL'
-    freshness: str = 'CURRENT'
     source: str
     field: str
     value: Any
     unit: str
     as_of: str
     method: str = "原始字段"
+    category: str = 'market_structure'
+    status: str = 'REAL'
+    freshness: str = 'CURRENT'
 
 def index_return(rows: list[dict], periods: int = 20) -> tuple[float|None, Evidence|None]:
     if len(rows) < periods + 1: return None, None
