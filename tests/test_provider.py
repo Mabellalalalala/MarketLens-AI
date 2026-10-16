@@ -26,4 +26,4 @@ def test_missing_key_is_local_error():
 def test_ifind_index_table_normalization():
     from marketlens_ai.normalization import normalize_index_data
     rows=normalize_index_data('|证券代码|证券简称|日期|收盘价（单位：元）|N日成交量|N日成交额（单位：元）|\n|---|---|---|---|---|---|\n|000300.SH|沪深300|20261016|4170.61|3641.08亿|9.1174万亿|')
-    assert rows[0]['symbol']=='000300.SH' and rows[0]['close']==4170.61 and rows[0]['status']=='REAL'
+    assert rows[0]['symbol']=='000300.SH' and rows[0]['close']==4170.61 and rows[0]['status']=='REAL' and rows[0]['turnover']==9.1174e12
