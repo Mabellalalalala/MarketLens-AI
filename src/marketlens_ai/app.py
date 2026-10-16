@@ -1,4 +1,6 @@
 import os
+import json
+from pathlib import Path
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -36,3 +38,11 @@ def api_industries():
 def api_ask():
     payload=request.get_json(silent=True) or {}
     return jsonify(ask_marketlens(payload.get('question',''), payload.get('context') or {}))
+
+@app.get('/api/snapshot')
+def api_snapshot():
+    path=Path(__file__).parents[2] / 'data' / 'snapshots' / 'latest.json'
+    if not path.exists(): return jsonify({'status':'UNAVAILABLE','error':'data/snapshots/latest.json 不存在'}),404
+    try:
+        data=json.loads(path.read_text(encoding='utf-8')); return jsonify({'status':'ok','snapshot':data})
+    except Exception as e: return jsonify({'status':'ERROR','error':str(e)}),500
