@@ -1,11 +1,14 @@
 """Build one REAL/DERIVED research snapshot. No fixture fallback."""
-import json, os, sys
+import json, os, sys, argparse
 from datetime import datetime, timezone
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / 'src'))
 from marketlens_ai.core_research import research
 
 def main():
+    parser=argparse.ArgumentParser(); parser.add_argument('--provider',choices=['rest','mcp'],default=os.getenv('DATA_PROVIDER','rest')); args=parser.parse_args()
+    if args.provider == 'mcp':
+        print('MCP snapshot generation is NOT_VERIFIED until official endpoint is configured; run scripts/test_fuyao_mcp.py first.'); return 2
     result=research('沪深300',20)
     now=datetime.now(timezone.utc).isoformat()
     sid=datetime.now(timezone.utc).strftime('snapshot_%Y%m%dT%H%M%SZ')
@@ -18,4 +21,4 @@ def main():
     (out/f'{sid}.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2),encoding='utf-8')
     (out/'latest.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps({'snapshot_id':sid,'path':str(out/'latest.json'),'coverage':snapshot['data_quality']['coverage']},ensure_ascii=False,indent=2))
-if __name__=='__main__': main()
+if __name__=='__main__': raise SystemExit(main() or 0)
