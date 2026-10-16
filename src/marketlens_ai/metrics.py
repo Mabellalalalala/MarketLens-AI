@@ -48,7 +48,7 @@ def trading_activity(rows: list[dict], window: int = 20):
 def style_rotation(large_rows, small_rows, periods=20):
     large, le = index_return(large_rows, periods); small, se = index_return(small_rows, periods)
     if large is None or small is None: return {'status':'UNAVAILABLE','large_return':large,'small_return':small,'difference':None}, [x for x in (le,se) if x]
-    diff=round(small-large,4); label='Small/mid-cap leadership' if diff < -2 else ('Large-cap leadership' if diff > 2 else 'Mixed')
+    diff=round(small-large,4); label='Small/mid-cap leadership' if diff > 2 else ('Large-cap leadership' if diff < -2 else 'Mixed')
     ev=Evidence(id='ev-style-difference',source='fuyao',field='20d_return_difference',value=diff,unit='percentage_points',as_of=max(le.as_of,se.as_of),method='中证1000 20D收益 - 沪深300 20D收益',category='style_rotation')
     return {'status':'DERIVED','large_return':large,'small_return':small,'difference':diff,'label':label}, [le,se,ev]
 

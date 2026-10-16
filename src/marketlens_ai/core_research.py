@@ -26,8 +26,13 @@ def research(symbol='沪深300', periods=20, focus=None):
     evidence_objs=list({e.id:e for e in evidence_objs}.values())
     base = research_output({'symbol':symbol,'periods':periods,'focus':focus}, facts, evidence_objs, quality, ret, breadth_pct)
     latest_ms=(rows[-1].get('date') if rows else None)
-    try: base['as_of']=datetime.fromtimestamp(int(latest_ms)/1000,tz=timezone.utc).strftime('%Y-%m-%d')
-    except (TypeError,ValueError,OverflowError): base['as_of']=None
+    try:
+        raw_date=str(latest_ms)
+        if len(raw_date)==8 and raw_date.isdigit(): base['as_of']=datetime.strptime(raw_date,'%Y%m%d').strftime('%Y-%m-%d')
+        else:
+            stamp=int(float(raw_date)); stamp=stamp/1000 if stamp>10**11 else stamp
+            base['as_of']=datetime.fromtimestamp(stamp,tz=timezone.utc).strftime('%Y-%m-%d')
+    except (TypeError,ValueError,OverflowError,IndexError): base['as_of']=None
     base['trading_activity']={'status':'REAL' if activity else 'UNAVAILABLE','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level'),'proxy':'Volume + Turnover limited measure'}
     base['style_rotation']=style
     base['dimensions']={
