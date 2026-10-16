@@ -19,6 +19,11 @@ try:
    out[name]={'http_status':rr.status_code,'response':data}
   else: out[name]={'status':'NOT_TESTED','reason':'实际 schema 未暴露 query 参数'}
  name='index_highfreq_quotes'; schema=(by.get(name) or {}).get('inputSchema') or {}; props=schema.get('properties') or {}
- out[name]={'status':'NOT_TESTED','schema_properties':list(props)}
+ if name in by and all(k in props for k in ('symbols','data_mode','indicators')):
+  rr=m.call(name,{'symbols':'000300.SH','data_mode':'real_time','indicators':'最新价,涨跌幅,成交量,成交额'})
+  try: data=rr.json()
+  except Exception: data={'text':rr.text[:500]}
+  out[name]={'http_status':rr.status_code,'response':data}
+ else: out[name]={'status':'NOT_TESTED','schema_properties':list(props)}
 except Exception as e: out['error']=str(e)
 print(json.dumps(out,ensure_ascii=False,indent=2))
