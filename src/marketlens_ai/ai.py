@@ -26,7 +26,7 @@ def ask_marketlens(question, context):
     if any(word in q for word in ASK_FORBIDDEN):
         return {'status':'policy_blocked','answer':'当前产品不提供价格方向预测、个股推荐、买卖或资产配置建议。可以基于当前证据解释市场状态、指标关系和需要重新评估的客观条件。','evidence_refs':[],'limitation':'问题超出 Evidence-grounded Market Research 范围。'}
     evidence=context.get('evidence',[]); ids=[e.get('id') for e in evidence]
-    if not evidence or context.get('data_quality',{}).get('level')=='不足':
+    if not evidence or context.get('data_quality',{}).get('level') in ('不足','ERROR','UNAVAILABLE'):
         return {'status':'insufficient_evidence','answer':'当前研究上下文没有足够证据回答这个问题。你可以继续查看市场宽度、风格或交易活跃度相关数据。','evidence_refs':[],'limitation':'当前 Evidence 不足。'}
     key=os.getenv('DEEPSEEK_API_KEY')
     if not key: return {'status':'unconfigured','error':'未配置 DEEPSEEK_API_KEY'}
