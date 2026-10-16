@@ -36,6 +36,16 @@ def research(symbol='沪深300', periods=20):
     base = research_output({'symbol':symbol,'periods':periods}, facts, evidence_objs, quality, ret, breadth_pct)
     base['trading_activity']={'status':'REAL' if activity else 'UNAVAILABLE','volume_ratio':(activity or {}).get('volume_ratio'),'amount_ratio':(activity or {}).get('amount_ratio'),'level':(activity or {}).get('level'),'proxy':'Volume + Turnover limited measure'}
     base['style_rotation']=style
+    base['dimensions']={
+        'market_structure':{'status':'REAL' if evidence else 'UNAVAILABLE','value':ret,'unit':'%','label':'Market Structure'},
+        'breadth':{'status':'REAL' if breadth.get('status')=='ok' else 'UNAVAILABLE','value':breadth_pct,'unit':'%','label':'Market Breadth','proxy':'Up/Down breadth proxy'},
+        'style':{'status':style.get('status'),'value':style.get('difference'),'unit':'percentage_points','label':'Style Rotation'},
+        'trading_activity':{'status':'REAL' if activity else 'UNAVAILABLE','value':activity,'unit':'ratio','label':'Trading Activity','proxy':'Volume + Turnover limited measure'},
+        'sentiment':{'status':'UNAVAILABLE','label':'Sentiment','reason':'当前授权数据环境未提供已验证情绪数据，本项未纳入综合判断'},
+        'valuation':{'status':'LIMITED','label':'Valuation','reason':'当前接口仅提供估值快照，历史估值分位不可用'},
+        'important_events':{'status':'UNAVAILABLE','label':'Important Events','reason':'当前授权数据环境未提供可用事件数据，本项未纳入综合判断'}
+    }
+    base['evidence_coverage']=[{'label':'Market Structure','status':base['dimensions']['market_structure']['status']},{'label':'Market Breadth','status':base['dimensions']['breadth']['status']},{'label':'Style Rotation','status':style.get('status')},{'label':'Trading Activity','status':base['dimensions']['trading_activity']['status']},{'label':'Valuation','status':'LIMITED'},{'label':'Sentiment','status':'UNAVAILABLE'},{'label':'Important Events','status':'UNAVAILABLE'}]
     base['contradictions'].append(activity_contradiction(ret, activity))
     if style.get('status')=='DERIVED': base['contradictions'].append({'status':'detected' if abs(style.get('difference',0))>2 else 'none','label':style.get('label'),'evidence_ids':['ev-style-difference']})
     base['market_breadth']={'status':'REAL' if breadth.get('status')=='ok' else 'UNAVAILABLE','up_pct':breadth_pct,'up':braw.get('up'),'down':braw.get('down'),'flat':braw.get('flat'),'sample_count':braw.get('sample_count'),'error':breadth.get('error')}
