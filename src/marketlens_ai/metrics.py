@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from datetime import datetime, timezone
 
 @dataclass
 class Evidence:
@@ -14,6 +15,14 @@ class Evidence:
     status: str = 'REAL'
     freshness: str = 'CURRENT'
 
+def as_of_date(value):
+    try:
+        raw=str(value)
+        if len(raw)==8 and raw.isdigit(): return datetime.strptime(raw,'%Y%m%d').strftime('%Y-%m-%d')
+        stamp=int(float(raw)); stamp=stamp/1000 if stamp>10**11 else stamp
+        return datetime.fromtimestamp(stamp,tz=timezone.utc).strftime('%Y-%m-%d')
+    except (TypeError,ValueError,OverflowError): return None
+
 def index_return(rows: list[dict], periods: int = 20) -> tuple[float|None, Evidence|None]:
     if len(rows) < periods + 1: return None, None
     rows = sorted(rows, key=lambda x: x.get("date", ""))
@@ -21,7 +30,7 @@ def index_return(rows: list[dict], periods: int = 20) -> tuple[float|None, Evide
     try:
         value = (float(end["close"]) / float(start["close"]) - 1) * 100
     except (KeyError, TypeError, ValueError, ZeroDivisionError): return None, None
-    return round(value, 4), Evidence(id='ev-index-return', source='fuyao', field='close', value=value, unit='%', as_of=end.get('date',''), method=f"({end['close']} / {start['close']} - 1) × 100")
+    return round(value, 4), Evidence(id='ev-index-return', source='fuyao', field='close', value=value, unit='%', as_of=as_of_date(end.get('date')) or 'unknown', method=f"({end['close']} / {start['close']} - 1) × 100")
 
 def classify_state(return_pct: float|None, breadth_pct: float|None) -> str:
     if return_pct is None: return "数据不足"
