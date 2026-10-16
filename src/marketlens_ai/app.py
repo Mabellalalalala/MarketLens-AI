@@ -1,4 +1,3 @@
-import os
 import json
 from pathlib import Path
 try:
@@ -10,12 +9,20 @@ from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
 from .core_research import research
 from .ai import generate, ask_marketlens
-app=Flask(__name__, template_folder='templates')
+
+app = Flask(__name__, template_folder='templates')
 
 @app.get('/')
-def index(): return render_template('index.html')
+def index():
+    return render_template('index.html')
+
+@app.get('/healthz')
+def healthz():
+    return jsonify({'status':'ok','service':'marketlens-ai'})
+
 @app.get('/api/research')
-def api_research(): return jsonify(research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20))))
+def api_research():
+    return jsonify(research(request.args.get('symbol','沪深300'), int(request.args.get('periods',20))))
 
 @app.get('/api/evidence/<evidence_id>')
 def api_evidence(evidence_id):
@@ -44,5 +51,7 @@ def api_snapshot():
     path=Path(__file__).parents[2] / 'data' / 'snapshots' / 'latest.json'
     if not path.exists(): return jsonify({'status':'UNAVAILABLE','error':'data/snapshots/latest.json 不存在'}),404
     try:
-        data=json.loads(path.read_text(encoding='utf-8')); return jsonify({'status':'ok','snapshot':data})
-    except Exception as e: return jsonify({'status':'ERROR','error':str(e)}),500
+        data=json.loads(path.read_text(encoding='utf-8'))
+        return jsonify({'status':'ok','snapshot':data})
+    except Exception as e:
+        return jsonify({'status':'ERROR','error':str(e)}),500
