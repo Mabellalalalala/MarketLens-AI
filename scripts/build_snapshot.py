@@ -3,7 +3,7 @@ import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / 'src'))
-from marketlens_ai.app import research
+from marketlens_ai.core_research import research
 
 def main():
     result=research('沪深300',20)
