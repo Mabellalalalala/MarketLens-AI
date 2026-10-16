@@ -7,7 +7,7 @@ import requests
 class FuyaoProvider:
     """扶摇 REST adapter. 密钥只从服务端环境读取。"""
     name = "扶摇 API"
-    def __init__(self, base_url=None, api_key=None, session=None, retries=2, timeout=15):
+    def __init__(self, base_url=None, api_key=None, session=None, retries=2, timeout=self.timeout):
         self.base_url = (base_url or os.getenv("FUYAO_API_BASE_URL") or "https://fuyao.aicubes.cn").rstrip("/")
         self.api_key = api_key or os.getenv("FUYAO_API_KEY") or os.getenv("API_KEY")
         self.session = session or requests.Session()
@@ -22,7 +22,7 @@ class FuyaoProvider:
         headers = {"X-api-key": self.api_key, "Accept": "application/json"}
         for attempt in range(self.retries + 1):
             try:
-                response = self.session.get(self.base_url + path, params=params, headers=headers, timeout=15)
+                response = self.session.get(self.base_url + path, params=params, headers=headers, timeout=self.timeout)
                 if response.status_code == 429 or response.text.find('"code":4001') >= 0:
                     if attempt < self.retries:
                         time.sleep(0.5 * (2 ** attempt)); continue
@@ -79,21 +79,28 @@ class FuyaoProvider:
         if snap.get("status") == "ok": snap["catalog"] = items
         return snap
 
-    def stock_snapshot(self, thscodes: list[str]) -> dict[str, Any]:
-        # 文档允许批量 thscodes；控制单次规模避免超长请求。
-        return self._get("/api/a-share/prices/snapshot", {"thscodes": ",".join(thscodes)})
+    def stock_snapshot(self, thscodes: list[str], batch_size: int = 50) -> dict[str, Any]:
+        batches=[]; all_rows=[]; failures=[]
+        for i in range(0, len(thscodes), batch_size):
+            codes=thscodes[i:i+batch_size]
+            out=self._get("/api/a-share/prices/snapshot", {"thscodes": ",".join(codes)})
+            record={'batch':i//batch_size+1,'requested':len(codes),'status':out.get('status'),'request_id':out.get('request_id'),'error':out.get('error')}
+            if out.get('status')=='ok':
+                rows=(out.get('raw') or {}).get('item',[]); all_rows.extend(rows); record['returned']=len(rows)
+            else: failures.append(record)
+            batches.append(record)
+        status='ok' if all_rows else ('error' if failures else 'empty')
+        return {'source':self.name,'status':status,'raw':{'item':all_rows,'batches':batches},'failures':failures}
 
     def breadth_for_index(self, thscode: str = "000300.SH") -> dict[str, Any]:
         members = self.index_constituents(thscode)
         if members.get("status") != "ok": return members
-        items = (members.get("raw") or {}).get("item", [])
-        codes = [x.get("thscode") for x in items if x.get("thscode")]
-        if not codes: return {"source": self.name, "status":"empty", "error":"成分股为空"}
-        snap = self.stock_snapshot(codes)
-        if snap.get("status") != "ok": return snap
-        rows = (snap.get("raw") or {}).get("item", [])
-        changes = [x.get("price_change_ratio_pct") for x in rows if isinstance(x.get("price_change_ratio_pct"),(int,float))]
-        up = sum(x > 0 for x in changes); down = sum(x < 0 for x in changes); flat = sum(x == 0 for x in changes)
-        return {"source":self.name,"status":"ok","raw":{"member_count":len(codes),"sample_count":len(changes),"up":up,"down":down,"flat":flat,"up_pct":round(up/len(changes)*100,2) if changes else None,"snapshot":rows,"timestamp":(snap.get("raw") or {}).get("timestamp")}}
+        items=(members.get("raw") or {}).get("item",[]); codes=[x.get("thscode") for x in items if x.get("thscode")]
+        if not codes: return {"source":self.name,"status":"empty","error":"成分股为空"}
+        snap=self.stock_snapshot(codes); rows=(snap.get("raw") or {}).get("item",[])
+        changes=[x.get("price_change_ratio_pct") for x in rows if isinstance(x.get("price_change_ratio_pct"),(int,float))]
+        up=sum(x>0 for x in changes); down=sum(x<0 for x in changes); flat=sum(x==0 for x in changes); coverage=len(changes)/len(codes)
+        status='ok' if coverage>=0.8 else 'insufficient'
+        return {"source":self.name,"status":status,"error":None if status=='ok' else '成分股快照覆盖率低于80%',"raw":{"member_count":len(codes),"sample_count":len(changes),"coverage":round(coverage,4),"up":up,"down":down,"flat":flat,"up_pct":round(up/len(changes)*100,2) if changes else None,"snapshot":rows,"batches":(snap.get('raw') or {}).get('batches',[])},"failures":snap.get('failures',[])}
     def trading_days(self) -> dict[str, Any]:
         return self._get("/api/a-share/calendar/trading-days", {})
