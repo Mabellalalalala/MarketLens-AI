@@ -11,6 +11,8 @@ class FuyaoProvider:
         self.base_url = (base_url or os.getenv("FUYAO_API_BASE_URL") or "https://fuyao.aicubes.cn").rstrip("/")
         self.api_key = api_key or os.getenv("FUYAO_API_KEY") or os.getenv("API_KEY")
         self.session = session or requests.Session()
+        # 本机常见代理会导致扶摇连接被远端关闭；默认直连，可由调用方传入自定义 session。
+        self.session.trust_env = False
         self.retries = retries
         self.timeout = timeout
 

@@ -8,7 +8,7 @@ from flask import Flask, jsonify, request, render_template
 from .providers.fuyao import FuyaoProvider
 from .metrics import index_return, classify_state, trading_activity, style_rotation, activity_contradiction, Evidence
 from .analysis import research_output
-from .ai import generate
+from .ai import generate, ask_marketlens
 app=Flask(__name__, template_folder='templates')
 
 def research(symbol='沪深300', periods=20, focus=None):
@@ -75,3 +75,8 @@ def api_research_ai():
 @app.get('/api/industries')
 def api_industries():
     return jsonify(FuyaoProvider().industry_snapshot())
+
+@app.post('/api/ask')
+def api_ask():
+    payload=request.get_json(silent=True) or {}
+    return jsonify(ask_marketlens(payload.get('question',''), payload.get('context') or {}))
